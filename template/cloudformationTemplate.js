@@ -174,7 +174,7 @@ module.exports = {
                 {
                   AllowedHeaders: ['*'],
                   AllowedMethods: ['PUT', 'POST', 'DELETE', 'HEAD', 'GET'],
-                  AllowedOrigins: [{ 'Fn::If': ['DeployCustomDomain', { 'Fn::Sub': 'https://${CustomDomain}' }, 'https://console.rhosys.ch'] }, 'https://console.rhosys.ch', 'http://localhost:8080'],
+                  AllowedOrigins: [{ 'Fn::If': ['DeployCustomDomain', { 'Fn::Sub': 'https://${CustomDomain}' }, { Ref: 'AWS::NoValue' }] }, 'https://console.rhosys.ch', 'http://localhost:8080'],
                   ExposedHeaders: ['x-amz-request-id'],
                   MaxAge: 3600
                 }
