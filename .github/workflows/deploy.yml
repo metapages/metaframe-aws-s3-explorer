@@ -39,5 +39,5 @@ jobs:
       - name: deno deploy
         env:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
-        run: just publish
+        run: just deploy
 
