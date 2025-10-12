@@ -4,7 +4,7 @@ import { serveDir } from 'jsr:@std/http/file-server';
 const STATIC_FILES_ROOT = "./dist"; 
 
 // Start the Deno server
-Deno.serve((req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -20,14 +20,12 @@ Deno.serve((req) => {
 
   // Serve files from the specified root directory
   // The 'urlRoot' option can be used to specify a different path prefix in the URL
-  const response = serveDir(req, { fsRoot: STATIC_FILES_ROOT, urlRoot: "" });
+  const response = await serveDir(req, { fsRoot: STATIC_FILES_ROOT, urlRoot: "" });
   
   // Add CORS headers to all responses
-  if (response instanceof Response) {
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  }
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   
   return response;
 }, { port: 8000 }); // Listen on port 8000

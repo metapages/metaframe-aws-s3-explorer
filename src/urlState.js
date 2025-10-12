@@ -1,6 +1,5 @@
 import {
   deleteHashParamFromWindow,
-  getHashParamValueBase64DecodedFromWindow,
   getHashParamValueJsonFromWindow,
   setHashParamValueJsonInWindow
 } from '@metapages/hash-query';
@@ -10,7 +9,7 @@ import {
  * @returns {string}
  */
 export function getDirectoryFromHash() {
-  return getHashParamValueBase64DecodedFromWindow("path");
+  return getHashParamValueJsonFromWindow("path");
 }
 
 /**
