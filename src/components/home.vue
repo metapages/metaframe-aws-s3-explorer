@@ -11,12 +11,8 @@
             <div class="title d-flex" style="align-items: center">
               <h4>AWS S3 Explorer</h4>
             </div>
-            <!-- Bucket breadcrumbs -->
-            <div class="" v-if="isAuthenticated && store.currentBucket" style="margin-right: 0.5rem;">
-              <span style="color: #666; font-weight: 500;">{{ store.currentBucket }}</span>
-            </div>
 
-            <div v-else-if="isAuthenticated">
+            <div v-if="isAuthenticated && !store.currentBucket">
               <span style="color: #666; font-weight: 500;">No Bucket Selected</span>
             </div>
 
@@ -78,12 +74,12 @@
                       :disabled="!selectedKeysCount" @click="downloadFiles" title="Download files">
                       <i class="fa fa-cloud-download-alt" style="margin-right: 0.5rem" />Download
                     </button>
-                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-primary" @click="store.showAddFolder = true" title="New folder">
-                      <i class="fa fa-folder-plus" style="margin-right: 0.5rem" />New Folder
+                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-primary" @click="store.showAddFolder = true" title="New">
+                      <i class="fa fa-folder-plus" style="margin-right: 0.5rem" />New
                     </button>
                     <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-danger"
-                      :disabled="!selectedKeysCount" @click="store.showTrash = true" title="Delete Objects">
-                      <i class="fa fa-trash-alt" style="margin-right: 0.5rem" />Delete Objects
+                      :disabled="!selectedKeysCount" @click="store.showTrash = true" title="Delete">
+                      <i class="fa fa-trash-alt" style="margin-right: 0.5rem" />Delete
                     </button>
                   </div>
                 </div>
