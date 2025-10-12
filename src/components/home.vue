@@ -4,27 +4,31 @@
 
       <div class="panel panel-primary">
         <!-- Panel including bucket/folder information and controls -->
-        <div class="panel-heading" style="display: flex; direction: row; align-items: center; justify-content: space-between;">
+        <div class="panel-heading" style="width: 100%; display: flex; direction: row; align-items: center; justify-content: space-between;">
 
           <!-- Bucket selection and breadcrumbs -->
-          <div style="display: flex; direction: row; align-items: center">
-            <div class="title d-flex" style="align-items: center">
-              <h4>AWS S3 Explorer</h4>
+          <div style="display: flex; direction: row; align-items: center; justify-content: flex-start;">
+            <div class="title d-flex" style="align-items: center; margin-right: 0.1rem;">
+              <h4>S3:</h4>
             </div>
-
-            <div v-if="isAuthenticated && !store.currentBucket">
+            
+            <!-- S3 bucket and path -->
+            <div v-if="isAuthenticated && store.currentBucket" style="margin-right: 1rem; flex: 1; white-space: nowrap; font-weight: bold; color: white;">
+              <span><a @click="exploreDirectory(null)" style="color: white; cursor: pointer;">{{ store.currentBucket }}</a></span>&nbsp;/&nbsp;
+              <span v-for="(part, partIndex) in pathParts" :key="part">
+                <a :style="{
+                    'text-decoration': partIndex + 1 === pathParts.length ? 'none' : undefined,
+                    'color': partIndex + 1 === pathParts.length ? 'unset' : undefined,
+                    'cursor': partIndex + 1 === pathParts.length ? 'unset' : 'pointer'
+                  }"
+                  @click="exploreDirectory(pathParts.slice(0, partIndex + 1).join(store.delimiter))">
+                  {{ part.length > 30 ? `${part.slice(0, 30)}…` : part }}
+                </a>&nbsp;/&nbsp;
+              </span>
+            </div>
+            
+            <div v-if="isAuthenticated && !store.currentBucket" style="margin-right: 1rem;">
               <span style="color: #666; font-weight: 500;">No Bucket Selected</span>
-            </div>
-
-            <!-- Record count -->
-            <div v-if="isAuthenticated && store.currentBucket">
-              <div class="btn-group" v-if="selectedKeysCount === 0">
-                <span id="badgecount" style="cursor: default;" class="btn badge " title="Object count">{{ store.objects.length }} {{ store.objects.length !== 1 ? 'objects' : 'object' }}</span>
-              </div>
-              <!-- Record/checked count -->
-              <div class="btn-group" v-if="selectedKeysCount > 0">
-                <span id="badgecount" style="cursor: default;" class="btn badge " title="Selected object count">{{ selectedKeysCount }} of {{ store.objects.length }} selected</span>
-              </div>
             </div>
           </div>
 
@@ -49,42 +53,43 @@
           <div class="panel-body">
 
             <!-- Fixed header content -->
-            <div style="flex-shrink: 0;">
+            <div style="flex-shrink: 0; width: 100%;">
               <template v-if="isAuthenticated && store.currentBucket">
-                <div style="display: flex; align-items: center; justify-content: space-between">
-                  <div>
-                    <span><a @click="exploreDirectory(null)">{{ store.currentBucket }}</a></span>&nbsp;/&nbsp;
-                    <span v-for="(part, partIndex) in pathParts" :key="part">
-                      <a :style="{
-                          'text-decoration': partIndex + 1 === pathParts.length ? 'none' : undefined,
-                          'color': partIndex + 1 === pathParts.length ? 'unset' : undefined,
-                          'cursor': partIndex + 1 === pathParts.length ? 'unset' : 'pointer'
-                        }"
-                        @click="exploreDirectory(pathParts.slice(0, partIndex + 1).join(store.delimiter))">
-                        {{ part.length > 30 ? `${part.slice(0, 30)}…` : part }}
-                      </a>&nbsp;/&nbsp;
-                    </span>
+                <div class="d-flex justify-content-between align-items-center" style="padding-top: 0.5rem; width: 100%;">
+                  <!-- Left side: Filter and object count -->
+                  <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+                    <input class="filter-results" type="text" v-model="state.filterText" placeholder="Filter results...">
+                    
+                    <!-- Object count -->
+                    <div style="flex-shrink: 0;">
+                      <div class="btn-group" v-if="selectedKeysCount === 0">
+                        <span id="badgecount" style="cursor: default; color: #999; background: none; border: none; padding: 0;" title="Object count">{{ store.objects.length }} {{ store.objects.length !== 1 ? 'objects' : 'object' }}</span>
+                      </div>
+                      <!-- Record/checked count -->
+                      <div class="btn-group" v-if="selectedKeysCount > 0">
+                        <span id="badgecount" style="cursor: default; color: #999; background: none; border: none; padding: 0;" title="Selected object count">{{ selectedKeysCount }} of {{ store.objects.length }} selected</span>
+                      </div>
+                    </div>
                   </div>
-                  <div style="flex-shrink: 0; flex-grow: 1; display: flex; flex-direction: row; flex-wrap: no-wrap; justify-content: flex-end">
-                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-success"
+                  
+                  <!-- Right side: Action buttons -->
+                  <div style="flex-shrink: 0; display: flex; flex-direction: row; flex-wrap: no-wrap; gap: 0.5rem;">
+                    <button type="button" style="cursor: pointer;" class="text-primary btn btn-xs btn-secondary"
                       :disabled="!selectedKeysCount" @click="sendSelectedFilesToMetaframe" title="Send selected files via metaframe">
                       <i class="fa fa-paper-plane" style="margin-right: 0.5rem" />Send Selected
                     </button>
-                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-warning"
+                    <button type="button" style="cursor: pointer;" class="text-primary btn btn-xs btn-secondary"
                       :disabled="!selectedKeysCount" @click="downloadFiles" title="Download files">
                       <i class="fa fa-cloud-download-alt" style="margin-right: 0.5rem" />Download
                     </button>
-                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-primary" @click="store.showAddFolder = true" title="New">
+                    <button type="button" style="cursor: pointer;" class="text-primary btn btn-xs btn-secondary" @click="store.showAddFolder = true" title="New">
                       <i class="fa fa-folder-plus" style="margin-right: 0.5rem" />New
                     </button>
-                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-danger"
+                    <button type="button" style="cursor: pointer;" class="text-primary btn btn-xs btn-secondary"
                       :disabled="!selectedKeysCount" @click="store.showTrash = true" title="Delete">
                       <i class="fa fa-trash-alt" style="margin-right: 0.5rem" />Delete
                     </button>
                   </div>
-                </div>
-                <div class="d-flex justify-content-start" style="padding-top: 0.5rem;">
-                  <input class="filter-results" type="text" v-model="state.filterText" placeholder="Filter results...">
                 </div>
               </template>
             </div>
@@ -97,9 +102,10 @@
                     <input type="checkbox" v-model="state.globalSelect">
                   </th>
                   <th>Object</th>
-                  <th>Last Modified</th>
+                  <th style="text-align: right;">Last Modified</th>
                   <!-- <th>Class</th> -->
-                  <th>Size</th>
+                  <th style="text-align: right;">Size</th>
+                  <th style="text-align: center;">Copy</th>
                 </tr>
               </thead>
               <tbody>
@@ -107,21 +113,31 @@
                   <td style="text-align: center">
                     <!-- Folders cannot be selected -->
                   </td>
-                  <td><i class="fas fa-folder" style="margin-right: 1rem" /><a @click="exploreDirectory(path.key)">
+                  <td><i class="fas fa-folder" style="margin-right: 1rem" /><a @click="exploreDirectory(path.key)" style="cursor: pointer;">
                     {{ path.key.split(store.delimiter).slice(-1)[0] || store.delimiter }}</a>
                   </td>
                   <td style="text-align: center" />
                   <!-- <td style="text-align: center" /> -->
                   <td style="text-align: center" />
+                  <td style="text-align: center;">
+                    <button type="button" class="btn btn-xs btn-secondary" @click.stop="copyDownloadLink(path.key)" title="Copy download link">
+                      <i class="fa fa-copy"></i>
+                    </button>
+                  </td>
                 </tr>
-                <tr v-for="path in sortedObjects.filter(o => o.type === 'PATH' && o.key.split(store.delimiter).slice(-1)[0])" :key="path.key" @click="sendFilesToMetaframe(path.key)">
+                <tr v-for="path in sortedObjects.filter(o => o.type === 'PATH' && o.key.split(store.delimiter).slice(-1)[0])" :key="path.key" @click="sendFilesToMetaframe(path.key)" :class="{ 'last-selected': state.lastSelectedKey === path.key }">
                   <td style="text-align: center; cursor: pointer" @click.stop="() => state.selectedKeys[path.key] = !state.selectedKeys[path.key]">
                     <input type="checkbox" v-model="state.selectedKeys[path.key]">
                   </td>
                   <td>{{ path.key.split(store.delimiter).slice(-1)[0] }}</td>
-                  <td style="text-align: center">{{ path.lastModified }}</td>
+                  <td style="text-align: right; font-size: 12px;">{{ path.lastModified }}</td>
                   <!-- <td style="text-align: center">{{ path.storageClass }}</td> -->
-                  <td style="text-align: center">{{ formatByteSize(path.size) }}</td>
+                  <td style="text-align: right;">{{ formatByteSize(path.size) }}</td>
+                  <td style="text-align: center;">
+                    <button type="button" class="btn btn-xs btn-secondary" @click.stop="copyDownloadLink(path.key)" title="Copy download link">
+                      <i class="fa fa-copy"></i>
+                    </button>
+                  </td>
                 </tr>
               </tbody>
               </table>
@@ -196,7 +212,7 @@ import SettingsModal from './settingsModal.vue';
 import TrashModal from './trashModal.vue';
 import UploadModal from './uploadModal.vue';
 
-const state = reactive({ objectCount: 0, selectedKeys: {}, filesToUpload: [], globalSelect: false, filterText: '' });
+const state = reactive({ objectCount: 0, selectedKeys: {}, filesToUpload: [], globalSelect: false, filterText: '', lastSelectedKey: null });
 
 // Check if user is authenticated (either via tokens or hash credentials)
 const isAuthenticated = computed(() => {
@@ -314,7 +330,13 @@ const downloadFiles = async () => {
 const sendFilesToMetaframe = async (fileKeys) => {
   if (typeof fileKeys === 'string') {
     fileKeys = [fileKeys];
+    // Track the last selected file
+    state.lastSelectedKey = fileKeys[0];
+  } else {
+    // For multiple files, track the last one
+    state.lastSelectedKey = fileKeys[fileKeys.length - 1];
   }
+  
   try {
     const files = Object.fromEntries(fileKeys.map((fileKey) => {
       // Generate pre-signed URL using AWS S3
@@ -377,6 +399,27 @@ const sendSelectedFilesToMetaframe = async () => {
   }
 };
 
+const copyDownloadLink = async (fileKey) => {
+  try {
+    const s3 = new AWS.S3({ region: store.region });
+    const params = {
+      Bucket: store.currentBucket,
+      Key: fileKey,
+      Expires: 3600 // URL expires in 1 hour
+    };
+    const url = s3.getSignedUrl('getObject', params);
+    
+    // Copy to clipboard
+    await navigator.clipboard.writeText(url);
+    
+    // Optional: Show a brief success message
+    console.log('Download link copied to clipboard');
+    
+  } catch (error) {
+    console.error('Error generating or copying download link:', error);
+  }
+};
+
 const sortedObjects = computed(() => store.objects.filter(o => !state.filterText || o.key.includes(state.filterText)).sort((a, b) => a.key.localeCompare(b.key)));
 const selectedKeysCount = computed(() => Object.keys(state.selectedKeys).filter(key => !store.deletedObjects[key] && state.selectedKeys[key]).length);
 
@@ -419,6 +462,7 @@ a {
   cursor: pointer;
   display: block;
   width: 300px;
+  min-width: 200px;
   margin: 0;
   padding: 0.25rem 1rem;
   background-size: 15px 15px;
@@ -428,5 +472,37 @@ a {
   border-radius: 4px;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px,
     rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+}
+
+/* Hide button text on small screens, show only icons */
+@media (max-width: 768px) {
+  .btn-xs {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+  }
+  
+  .btn-xs i {
+    margin-right: 0 !important;
+  }
+  
+  .btn-xs span:not(.fa):not(.fas):not(.far):not(.fab) {
+    display: none;
+  }
+  
+  .btn-xs {
+    min-width: auto !important;
+    width: auto !important;
+  }
+}
+
+/* Ensure all table rows have consistent border width */
+#s3objects-table tbody tr {
+  border: 2px solid transparent !important;
+}
+
+/* Highlight last selected row */
+.last-selected {
+  border: 2px solid #007bff !important;
+  background-color: rgba(0, 123, 255, 0.1) !important;
 }
 </style>
