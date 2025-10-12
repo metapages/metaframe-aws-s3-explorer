@@ -103,6 +103,12 @@ body > div#app {
     border-radius: 0 !important;
 }
 
+/* Remove border radius from outermost panel and header */
+.panel-primary,
+.panel-heading {
+    border-radius: 0 !important;
+}
+
 .panel-heading {
     flex-shrink: 0;
     padding: 5px 15px;
