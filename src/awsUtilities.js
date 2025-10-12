@@ -1,8 +1,18 @@
-import { watch, computed } from 'vue';
+import {
+  computed,
+  watch
+} from 'vue';
+
 import { DateTime } from 'luxon';
+
+import jwtManager from './jwtManager';
 import DEBUG from './logger';
 import store from './store';
-import jwtManager from './jwtManager';
+import {
+  getDirectoryFromHash,
+  hasCredentialsInHash,
+  loadCredentialsFromHash
+} from './urlState';
 
 const sha256 = str => crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
 
@@ -18,9 +28,42 @@ const base64URLEncode = string => btoa(String.fromCharCode.apply(null, new Uint8
 export async function login(forceLogin) {
   const searchParams = new URL(window.location).searchParams;
   store.initialized = true;
+  
+  // Check for hash credentials first
+  if (hasCredentialsInHash()) {
+    try {
+      const hashConfig = loadCredentialsFromHash();
+      await setDirectCredentials({
+        accessKeyId: hashConfig.accessKeyId,
+        secretAccessKey: hashConfig.secretAccessKey,
+        region: hashConfig.region
+      });
+      
+      // Set bucket and other config from hash
+      if (hashConfig.bucketName) {
+        store.currentBucket = hashConfig.bucketName;
+      }
+      if (hashConfig.delimiter) {
+        store.delimiter = hashConfig.delimiter;
+      }
+      
+      // Load directory from hash parameters
+      const directoryFromHash = getDirectoryFromHash();
+      if (directoryFromHash) {
+        store.currentDirectory = directoryFromHash;
+      }
+      
+      store.autoLoginIn = true;
+      store.showSettings = false;
+      return;
+    } catch (error) {
+      DEBUG.log('Hash credentials failed, falling back to other methods:', error);
+    }
+  }
+  
+  
   if (store.tokens && DateTime.fromSeconds(jwtManager.decode(store.tokens.access_token).exp) > DateTime.utc()) {
     store.autoLoginIn = true;
-    DEBUG.log('Found login token skipping login');
     await convertCredentialsToAWSCredentials();
     store.showSettings = false;
     return;
@@ -244,5 +287,31 @@ function convertCredentialsToAWSCredentials() {
     });
   } catch (error) {
     DEBUG.log('Failed to set credentials, following requests will not work due to the error:', error);
+  }
+}
+
+export async function setDirectCredentials(credentials) {
+  
+  try {
+    // Set AWS configuration
+    AWS.config.update({
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      region: credentials.region
+    });
+
+    // Test the credentials by calling STS
+    const sts = new AWS.STS({ region: credentials.region });
+    const stsResult = await sts.getCallerIdentity().promise();
+  
+    
+    // Update store with user info
+    store.userRoleId = stsResult.Arn.split('/')[1];
+    store.awsAccountId = stsResult.Account;
+    
+    return true;
+  } catch (error) {
+    DEBUG.log('Failed to set direct credentials:', error);
+    throw error;
   }
 }

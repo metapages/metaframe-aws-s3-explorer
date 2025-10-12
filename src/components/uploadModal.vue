@@ -71,7 +71,7 @@
           <div class="form-group">
             <div class="col-sm-offset-2 col-sm-10">
               <button :disabled="state.status === 'IN_PROGRESS'" type="button" class="btn btn-default" @click="closeUploads">Close</button>
-              <button v-if="uploadButtonText" type="button" class="btn btn-primary" @click="uploadClicked"><i class="fa fa-cloud-upload-alt fa-lg" /> {{ uploadButtonText }}
+              <button v-if="uploadButtonText" type="button" class="btn btn-primary" data-action="upload" @click="uploadClicked"><i class="fa fa-cloud-upload-alt fa-lg" /> {{ uploadButtonText }}
               </button>
             </div>
           </div>
@@ -82,9 +82,16 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue';
+import {
+  computed,
+  reactive,
+  watch
+} from 'vue';
 
-import { path2short, formatByteSize } from '../converters';
+import {
+  formatByteSize,
+  path2short
+} from '../converters';
 import DEBUG from '../logger';
 import store from '../store';
 
@@ -104,8 +111,19 @@ const status = computed(() => {
 const uploadButtonText = computed(() => {
   return {
     WAITING_FOR_APPROVAL: props.filesToUpload?.length === 1 ? 'Upload 1 file' : `Upload ${props.filesToUpload?.length} files`,
-    IN_PROGRESS: 'Cancel remaining uploads'
+    IN_PROGRESS: 'Cancel remaining uploads',
+    FINISHED: 'Close'
   }[status.value];
+});
+
+// Watch for upload completion and automatically close modal
+watch(allUploadsCompleted, (completed) => {
+  if (completed) {
+    // Wait a moment to show completion, then close
+    setTimeout(() => {
+      closeUploads();
+    }, 1000);
+  }
 });
 
 const uploadClicked = () => {
@@ -132,13 +150,14 @@ const uploadFiles = () => {
   state.uploadStarted = true;
 
   props.filesToUpload.forEach((file, fileIndex) => {
-    DEBUG.log('Uploading file:', file);
-
     const s3client = new AWS.S3({ region: store.region });
+    const s3Key = (store.currentDirectory && `${store.currentDirectory}${store.delimiter}` || '') + (file.fullPath || file.name);
+    
     const params = {
       Bucket: store.currentBucket.trim().toLowerCase(),
-      Key: (store.currentDirectory && `${store.currentDirectory}${store.delimiter}` || '') + (file.fullPath || file.name),
-      ContentType: file.type, Body: file
+      Key: s3Key,
+      ContentType: file.type, 
+      Body: file.content || file
     };
     const uploadEventBus = s3client.upload(params);
     uploadHandlerMap[fileIndex] = uploadEventBus;
@@ -146,7 +165,6 @@ const uploadFiles = () => {
     state.completionPercentageMap[fileIndex] = 0;
 
     const progressUpdatedHandler = evt => {
-      DEBUG.log('File:', file, 'Part:', evt.part, evt.loaded, 'of', evt.total);
       state.completionPercentageMap[fileIndex] = Number(evt.total) && Math.round(Number(evt.loaded) / Number(evt.total) * 100) || 0;
     };
 
@@ -155,17 +173,13 @@ const uploadFiles = () => {
         // AccessDenied is a normal consequence of lack of permission
         // and we do not treat this as completely unexpected
         if (err.code === 'AccessDenied') {
-          DEBUG.log('Access Denied for upload:', file);
           state.completionPercentageMap[fileIndex] = 'DENIED';
         } else if (err.code === 'RequestAbortedError') {
-          DEBUG.log('Abort upload:', file);
           state.completionPercentageMap[fileIndex] = 'CANCELLED';
         } else {
-          DEBUG.log(JSON.stringify(err));
-          state.completionPercentageMap[fileIndex] = `FAILED: ${err.code}`;
+          state.completionPercentageMap[fileIndex] = `FAILED: ${err.code || err.message || 'Unknown error'}`;
         }
       } else {
-        DEBUG.log('Uploaded', file.name);
         state.completionPercentageMap[fileIndex] = 100;
       }
     };

@@ -1,8 +1,8 @@
 <template>
   <DropzoneWrapper @fileAdded="fileAdded">
-    <div class="col-12" style="display: flex; flex-direction: column; flex-wrap: nowrap;">
+    <div class="col-12">
 
-      <div class="panel panel-primary" style="flex-grow: 1">
+      <div class="panel panel-primary">
         <!-- Panel including bucket/folder information and controls -->
         <div class="panel-heading" style="display: flex; direction: row; align-items: center; justify-content: space-between;">
 
@@ -12,16 +12,16 @@
               <h4>AWS S3 Explorer</h4>
             </div>
             <!-- Bucket breadcrumbs -->
-            <div class="" v-if="store.tokens && store.currentBucket" style="margin-right: 0.5rem;">
-              <button type="button" class="btn btn-default" @click="selectBucket">{{ store.currentBucket }}</button>
+            <div class="" v-if="isAuthenticated && store.currentBucket" style="margin-right: 0.5rem;">
+              <span style="color: #666; font-weight: 500;">{{ store.currentBucket }}</span>
             </div>
 
-            <div v-else-if="store.tokens">
-              <button type="button" class="btn btn-default" @click="selectBucket">Select Bucket</button>
+            <div v-else-if="isAuthenticated">
+              <span style="color: #666; font-weight: 500;">No Bucket Selected</span>
             </div>
 
             <!-- Record count -->
-            <div v-if="store.tokens && store.currentBucket">
+            <div v-if="isAuthenticated && store.currentBucket">
               <div class="btn-group" v-if="selectedKeysCount === 0">
                 <span id="badgecount" style="cursor: default;" class="btn badge " title="Object count">{{ store.objects.length }} {{ store.objects.length !== 1 ? 'objects' : 'object' }}</span>
               </div>
@@ -34,61 +34,67 @@
 
           <!-- Folder/Bucket radio group and progress spinner -->
           <div id="navbuttons">
-            <div class="btn-group d-flex">
-              <div v-if="store.currentBucket && store.tokens">
-                <span style="cursor: pointer;" class="btn fa fa-sync fa-2x" :class="{ 'fa-spin': state.loading }" @click="refresh()" title="Reload the directory" />
+            <div class="btn-group d-flex" style="align-items: center;">
+              <div v-if="store.currentBucket && isAuthenticated">
+                <span style="cursor: pointer; padding: 8px;" class="btn fa fa-sync fa-lg" :class="{ 'fa-spin': state.loading }" @click="refresh()" title="Reload the directory" />
               </div>
-              <span style="cursor: pointer;" class="btn fa fa-sign-out-alt fa-2x" @click="logout()" title="Logout" />
-              <span style="cursor: pointer;" class="btn fa" @click="openGithub()" title="Check out the source at Github.com"><img src="../assets/github-logo.svg" height="28"></span>
+              <span style="cursor: pointer; padding: 8px;" class="btn fa fa-cog fa-lg" @click="openSettings()" title="Edit Settings" />
+              <span style="cursor: pointer; padding: 8px;" class="btn fa" @click="openGithub()" title="Check out the source at Github.com"><img src="../assets/github-logo.svg" height="20"></span>
             </div>
           </div>
         </div>
 
-        <div v-if="store.globalLoader">
+        <div v-if="store.globalLoader" style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">
           <loader />
         </div>
 
         <template v-else>
           <!-- Panel including S3 object table -->
-          <div class="panel-body" style="overflow: auto">
+          <div class="panel-body">
 
-            <template v-if="store.tokens && store.currentBucket">
-              <div style="display: flex; align-items: center; justify-content: space-between">
-                <div>
-                  <span><a href="#" @click="exploreDirectory(null)">{{ store.currentBucket }}</a></span>&nbsp;/&nbsp;
-                  <span v-for="(part, partIndex) in pathParts" :key="part">
-                    <a :style="{
-                        'text-decoration': partIndex + 1 === pathParts.length ? 'none' : undefined,
-                        'color': partIndex + 1 === pathParts.length ? 'unset' : undefined,
-                        'cursor': partIndex + 1 === pathParts.length ? 'unset' : 'pointer'
-                      }"
-                      :href="`#path=${pathParts.slice(0, partIndex + 1).join(store.delimiter)}`" @click="exploreDirectory(pathParts.slice(0, partIndex + 1).join(store.delimiter))">
-                      {{ part.length > 30 ? `${part.slice(0, 30)}…` : part }}
-                    </a>&nbsp;/&nbsp;
-                  </span>
+            <!-- Fixed header content -->
+            <div style="flex-shrink: 0;">
+              <template v-if="isAuthenticated && store.currentBucket">
+                <div style="display: flex; align-items: center; justify-content: space-between">
+                  <div>
+                    <span><a @click="exploreDirectory(null)">{{ store.currentBucket }}</a></span>&nbsp;/&nbsp;
+                    <span v-for="(part, partIndex) in pathParts" :key="part">
+                      <a :style="{
+                          'text-decoration': partIndex + 1 === pathParts.length ? 'none' : undefined,
+                          'color': partIndex + 1 === pathParts.length ? 'unset' : undefined,
+                          'cursor': partIndex + 1 === pathParts.length ? 'unset' : 'pointer'
+                        }"
+                        @click="exploreDirectory(pathParts.slice(0, partIndex + 1).join(store.delimiter))">
+                        {{ part.length > 30 ? `${part.slice(0, 30)}…` : part }}
+                      </a>&nbsp;/&nbsp;
+                    </span>
+                  </div>
+                  <div style="flex-shrink: 0; flex-grow: 1; display: flex; flex-direction: row; flex-wrap: no-wrap; justify-content: flex-end">
+                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-success"
+                      :disabled="!selectedKeysCount" @click="sendSelectedFilesToMetaframe" title="Send selected files via metaframe">
+                      <i class="fa fa-paper-plane" style="margin-right: 0.5rem" />Send Selected
+                    </button>
+                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-warning"
+                      :disabled="!selectedKeysCount" @click="downloadFiles" title="Download files">
+                      <i class="fa fa-cloud-download-alt" style="margin-right: 0.5rem" />Download
+                    </button>
+                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-primary" @click="store.showAddFolder = true" title="New folder">
+                      <i class="fa fa-folder-plus" style="margin-right: 0.5rem" />New Folder
+                    </button>
+                    <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-danger"
+                      :disabled="!selectedKeysCount" @click="store.showTrash = true" title="Delete Objects">
+                      <i class="fa fa-trash-alt" style="margin-right: 0.5rem" />Delete Objects
+                    </button>
+                  </div>
                 </div>
-                <div style="flex-shrink: 0; flex-grow: 1; display: flex; flex-direction: row; flex-wrap: no-wrap; justify-content: flex-end">
-                  <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-warning"
-                    :disabled="!selectedKeysCount" @click="downloadFiles" title="Download files">
-                    <i class="fa fa-cloud-download-alt" style="margin-right: 0.5rem" />Download
-                  </button>
-                  <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-primary" @click="store.showAddFolder = true" title="New folder">
-                    <i class="fa fa-folder-plus" style="margin-right: 0.5rem" />New Folder
-                  </button>
-                  <button type="button" style="cursor: pointer; margin-left: 0.5rem" class="text-primary btn btn-xs btn-danger"
-                    :disabled="!selectedKeysCount" @click="store.showTrash = true" title="Delete Objects">
-                    <i class="fa fa-trash-alt" style="margin-right: 0.5rem" />Delete Objects
-                  </button>
+                <div class="d-flex justify-content-start" style="padding-top: 0.5rem;">
+                  <input class="filter-results" type="text" v-model="state.filterText" placeholder="Filter results...">
                 </div>
-              </div>
-              <div class="d-flex justify-content-end" style="padding-top: 1rem;">
-                <input class="filter-results" type="text" v-model="state.filterText" placeholder="Filter results...">
-              </div>
-            </template>
+              </template>
+            </div>
 
-            <br>
-
-            <table v-if="store.tokens" class="table table-bordered table-hover table-striped" style="width:100%;" id="s3objects-table">
+            <div v-if="isAuthenticated" style="flex: 1; overflow: auto; min-height: 0; margin-top: 1rem; padding-bottom: 0.25rem;">
+              <table class="table table-bordered table-hover table-striped" style="width:100%;" id="s3objects-table">
               <thead>
                 <tr>
                   <th class="text-center" style="text-align: center; cursor: pointer" @click="state.globalSelect = !state.globalSelect">
@@ -96,37 +102,39 @@
                   </th>
                   <th>Object</th>
                   <th>Last Modified</th>
-                  <th>Class</th>
+                  <!-- <th>Class</th> -->
                   <th>Size</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="path in sortedObjects.filter(o => o.type === 'DIRECTORY')" :key="path.key">
-                  <td style="text-align: center; cursor: pointer" @click="() => state.selectedKeys[path.key] = !state.selectedKeys[path.key]">
-                    <input type="checkbox" v-model="state.selectedKeys[path.key]">
+                  <td style="text-align: center">
+                    <!-- Folders cannot be selected -->
                   </td>
-                  <td><i class="fas fa-folder" style="margin-right: 1rem" /><a :href="`#path=${path.key}`" @click="exploreDirectory(path.key)">
+                  <td><i class="fas fa-folder" style="margin-right: 1rem" /><a @click="exploreDirectory(path.key)">
                     {{ path.key.split(store.delimiter).slice(-1)[0] || store.delimiter }}</a>
                   </td>
                   <td style="text-align: center" />
-                  <td style="text-align: center" />
+                  <!-- <td style="text-align: center" /> -->
                   <td style="text-align: center" />
                 </tr>
-                <tr v-for="path in sortedObjects.filter(o => o.type === 'PATH' && o.key.split(store.delimiter).slice(-1)[0])" :key="path.key">
-                  <td style="text-align: center; cursor: pointer" @click="() => state.selectedKeys[path.key] = !state.selectedKeys[path.key]">
+                <tr v-for="path in sortedObjects.filter(o => o.type === 'PATH' && o.key.split(store.delimiter).slice(-1)[0])" :key="path.key" @click="sendFilesToMetaframe(path.key)">
+                  <td style="text-align: center; cursor: pointer" @click.stop="() => state.selectedKeys[path.key] = !state.selectedKeys[path.key]">
                     <input type="checkbox" v-model="state.selectedKeys[path.key]">
                   </td>
                   <td>{{ path.key.split(store.delimiter).slice(-1)[0] }}</td>
                   <td style="text-align: center">{{ path.lastModified }}</td>
-                  <td style="text-align: center">{{ path.storageClass }}</td>
+                  <!-- <td style="text-align: center">{{ path.storageClass }}</td> -->
                   <td style="text-align: center">{{ formatByteSize(path.size) }}</td>
                 </tr>
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         </template>
+        </div>
       </div>
-    </div>
+
 
     <div class="panel panel-success" v-if="store.awsAccountId && store.tokens && store.currentBucket" @click="store.showUploads = true" style="cursor: pointer">
       <div class="panel-heading" style="display: flex; direction: row; align-items: center; justify-content: space-between;">
@@ -155,29 +163,49 @@
       <UploadModal v-if="store.showUploads" :filesToUpload="state.filesToUpload" @uploadsCompleted="uploadsCompleted" />
     </div>
 
-    <PoweredBy />
   </DropzoneWrapper>
 </template>
 
 <script setup>
-import { reactive, onMounted, computed, watch } from 'vue';
+import {
+  computed,
+  onMounted,
+  reactive,
+  watch
+} from 'vue';
 
+import {
+  fetchSharedSettings,
+  login
+} from '../awsUtilities';
+import {
+  downloadObjects,
+  fetchBucketObjects
+} from '../bucketManager';
+import { formatByteSize } from '../converters';
 import DEBUG from '../logger';
 import store, { getBuckets } from '../store';
-import SettingsModal from './settingsModal.vue';
-import BucketSelectorModal from './bucketSelectorModal.vue';
+import {
+  clearCredentialsFromHash,
+  getDirectoryFromHash,
+  hasCredentialsInHash,
+  saveCredentialsToHash,
+  saveDirectoryToHash
+} from '../urlState';
 import AddFolderModal from './addFolderModal.vue';
-import TrashModal from './trashModal.vue';
-import UploadModal from './uploadModal.vue';
-import PoweredBy from './poweredBy.vue';
+import BucketSelectorModal from './bucketSelectorModal.vue';
 import DropzoneWrapper from './dropzoneWrapper.vue';
 import Loader from './loader.vue';
-
-import { fetchSharedSettings, login } from '../awsUtilities';
-import { formatByteSize } from '../converters';
-import { fetchBucketObjects, downloadObjects } from '../bucketManager';
+import SettingsModal from './settingsModal.vue';
+import TrashModal from './trashModal.vue';
+import UploadModal from './uploadModal.vue';
 
 const state = reactive({ objectCount: 0, selectedKeys: {}, filesToUpload: [], globalSelect: false, filterText: '' });
+
+// Check if user is authenticated (either via tokens or hash credentials)
+const isAuthenticated = computed(() => {
+  return store.tokens || hasCredentialsInHash();
+});
 
 const refresh = async () => {
   const spinnerAsync = new Promise(resolve => setTimeout(resolve, 1000));
@@ -192,11 +220,13 @@ const refresh = async () => {
 };
 
 const logout = () => {
-  DEBUG.log('Logging out');
   store.objects = [];
   store.loggedOut = true;
   store.autoLoginIn = false;
   store.showBucketSelector = false;
+
+  // Clear hash credentials
+  clearCredentialsFromHash();
 
   if (store.tokens) {
     store.tokens = null;
@@ -205,6 +235,10 @@ const logout = () => {
     return;
   }
 
+  store.showSettings = true;
+};
+
+const openSettings = () => {
   store.showSettings = true;
 };
 
@@ -228,7 +262,8 @@ onMounted(async () => {
   await fetchSharedSettings();
   store.globalLoader = false;
 
-  if (!store.tokens) {
+  // Check if authenticated (either via tokens or direct credentials)
+  if (!isAuthenticated.value) {
     store.showSettings = true;
     store.objects = [];
     return;
@@ -237,11 +272,11 @@ onMounted(async () => {
   if (!store.currentBucket) {
     if (getBuckets().length) {
       store.currentBucket = getBuckets()[0].bucket?.trim().toLowerCase();
+    } else {
+      store.showBucketSelector = true;
+      store.objects = [];
       return;
     }
-    store.showBucketSelector = true;
-    store.objects = [];
-    return;
   }
 
   await refresh();
@@ -252,10 +287,17 @@ const fileAdded = file => {
   store.showUploads = true;
 };
 
+// Expose fileAdded function globally for metaframe integration
+window.addFileToUploadQueue = fileAdded;
+
 const exploreDirectory = async directory => {
   state.selectedKeys = {};
   state.globalSelect = false;
   store.currentDirectory = directory;
+  
+  // Save directory to hash parameters
+  saveDirectoryToHash(directory);
+  
   await fetchBucketObjects();
 };
 
@@ -273,6 +315,72 @@ const downloadFiles = async () => {
   await downloadObjects(store.currentBucket, Object.keys(state.selectedKeys));
 };
 
+const sendFilesToMetaframe = async (fileKeys) => {
+  if (typeof fileKeys === 'string') {
+    fileKeys = [fileKeys];
+  }
+  try {
+    const files = Object.fromEntries(fileKeys.map((fileKey) => {
+      // Generate pre-signed URL using AWS S3
+      const s3 = new AWS.S3({ region: store.region });
+      const params = {
+        Bucket: store.currentBucket,
+        Key: fileKey,
+        Expires: 3600 // URL expires in 1 hour
+      };
+      
+      const url = s3.getSignedUrl('getObject', params);
+      return [fileKey, {type:"url", value: url, timestamp: Date.now()}];
+    }));
+    
+    // Send via metaframe output
+    if (window.metaframe) {
+      window.metaframe.setOutputs(files);
+    }
+  } catch (error) {
+    console.error('Error generating pre-signed URL:', error);
+  }
+};
+
+const sendSelectedFilesToMetaframe = async () => {
+  try {
+    const selectedKeys = Object.keys(state.selectedKeys).filter(key => state.selectedKeys[key]);
+    
+    if (selectedKeys.length === 0) {
+      return;
+    }
+    
+    // Collect all files to send (including nested files from folders)
+    const allFilesToSend = [];
+    
+    for (const key of selectedKeys) {
+      const object = store.objects.find(obj => obj.key === key);
+      if (object) {
+        if (object.type === 'PATH') {
+          // It's a file, add it directly
+          allFilesToSend.push(key);
+        } else if (object.type === 'DIRECTORY') {
+          // It's a folder, find all files within this folder
+          const folderFiles = store.objects
+            .filter(obj => obj.type === 'PATH' && obj.key.startsWith(key + store.delimiter))
+            .map(obj => obj.key);
+          allFilesToSend.push(...folderFiles);
+        }
+      }
+    }
+    
+    if (allFilesToSend.length === 0) {
+      return;
+    }
+    
+    // Send all files via metaframe
+    await sendFilesToMetaframe(allFilesToSend);
+    
+  } catch (error) {
+    console.error('Error sending selected files:', error);
+  }
+};
+
 const sortedObjects = computed(() => store.objects.filter(o => !state.filterText || o.key.includes(state.filterText)).sort((a, b) => a.key.localeCompare(b.key)));
 const selectedKeysCount = computed(() => Object.keys(state.selectedKeys).filter(key => !store.deletedObjects[key] && state.selectedKeys[key]).length);
 
@@ -283,7 +391,7 @@ const pathParts = computed(() => {
   return store.currentDirectory && store.currentDirectory.split(store.delimiter) || [];
 });
 
-const openGithub = () => { window.open('https://github.com/Rhosys/aws-s3-explorer#aws-s3-explorer', '_blank'); };
+const openGithub = () => { window.open('https://github.com/metapages/metaframe-aws-s3-explorer#aws-s3-explorer', '_blank'); };
 
 const globalSelectWatcher = computed(() => state.globalSelect);
 
@@ -314,14 +422,14 @@ a {
 .filter-results {
   cursor: pointer;
   display: block;
-  width: 350px;
-  margin: 20px auto;
-  padding: 0.5rem 2rem;
+  width: 300px;
+  margin: 0;
+  padding: 0.25rem 1rem;
   background-size: 15px 15px;
   background: white no-repeat 15px center;
   font-size: 14px;
-  border: none !important;
-  border-radius: 5px;
+  border: 1px solid #ddd !important;
+  border-radius: 4px;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px,
     rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
 }

@@ -1,7 +1,7 @@
 {
-  "name": "s3-explorer",
-  "version": "0.0.0",
-  "description": "AWS S3 Object explorer in your browser - completely headless, runs without a server",
+  "name": "@metapages/metaframe-aws-s3-explorer",
+  "version": "0.1.0",
+  "description": "AWS S3 Object explorer metaframe - completely headless, runs without a server",
   "author": "Rhosys Developers <developers@rhosys.ch>",
   "repository": {
     "type": "git",
@@ -24,6 +24,8 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/vue-fontawesome": "3.0.0-5",
+    "@metapages/hash-query": "^0.9.8",
+    "@metapages/metapage": "^1.8.24",
     "@suadelabs/vue3-multiselect": "^1.0.2",
     "aws-sdk": "^2.981.0",
     "dragster": "^0.1.3",
@@ -47,7 +49,7 @@
     "test": "babel src -d lib && mocha -r esm tests/*.test.js"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^1.3.0",
+    "@vitejs/plugin-vue": "^1.9.4",
     "@vue/compiler-sfc": "^3.0.5",
     "aws-architect": "^6.6.4",
     "cfn-response": "^1.0.1",
@@ -65,7 +67,7 @@
     "fs-extra": "^8.1.0",
     "glob": "^7.1.6",
     "sass": "^1.38.2",
-    "vite": "^2.4.4"
+    "vite": "^2.5.10"
   },
   "engines": {
     "node": ">=12"

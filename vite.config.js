@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+
 import vue from '@vitejs/plugin-vue';
 
 // https://vitejs.dev/config/
@@ -13,5 +14,11 @@ export default defineConfig({
       scss: {}
     }
   },
-  base: './'
+  base: './',
+  // Exclude metaframe-markdown directory from being processed by this Vite instance
+  server: {
+    fs: {
+      deny: ['metaframe-markdown/**']
+    }
+  }
 });

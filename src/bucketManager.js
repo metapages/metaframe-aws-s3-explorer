@@ -1,10 +1,14 @@
-import { DateTime } from 'luxon';
-import { watch, computed } from 'vue';
+import {
+  computed,
+  watch
+} from 'vue';
+
 import { saveAs } from 'file-saver';
 import JsZip from 'jszip';
+import { DateTime } from 'luxon';
 import shortUuid from 'short-uuid';
 
-import store, { getBuckets } from './store';
+import store from './store';
 
 let currentBucketInvocationIdentifier = null;
 
@@ -109,7 +113,7 @@ export async function validateConfiguration(bucket) {
 }
 
 export async function downloadObjects(bucket, keys) {
-  const s3client = new AWS.S3({ maxRetries: 0, region: getBuckets().find(b => b.bucket === bucket).region || store.region });
+  const s3client = new AWS.S3({ maxRetries: 0, region: store.region });
 
   const blobs = [];
   const downloadObject = async key => {
@@ -131,8 +135,10 @@ export async function downloadObjects(bucket, keys) {
     }
 
     const bucketObjects = await fetchBucketObjectsExplicit(key, true);
-    const additionalObjectKeys = bucketObjects.map(b => b.key);
-    await Promise.all(additionalObjectKeys.map(additionalKey => downloadObject(additionalKey)));
+    if (bucketObjects && Array.isArray(bucketObjects)) {
+      const additionalObjectKeys = bucketObjects.map(b => b.key);
+      await Promise.all(additionalObjectKeys.map(additionalKey => downloadObject(additionalKey)));
+    }
   }));
 
   if (blobs.length === 1) {

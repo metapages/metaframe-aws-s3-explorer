@@ -1,81 +1,108 @@
 <template>
   <div>
+    <div class="modal-backdrop" @click="closeModal"></div>
     <div class="modal-dialog">
-      <div class="modal-content">
-        <form @submit.prevent="cognitoLogin()">
+      <div class="modal-content" @click.stop>
+        <form @submit.prevent="directLogin()">
           <div>
             <div class="modal-header">
               <h4 class="modal-title">S3 Explorer: Settings</h4>
+              <button type="button" class="close" @click="closeModal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
             <div class="modal-body">
               <div class="col-md-18">
-                <h2>Welcome to the AWS S3 Explorer</h2>
                 <div class="" style="width: 100%;">
                   <div>
-                    To log in specify the following configuration:
+                    Update your AWS credentials and configuration:
                   </div>
                   <br>
-                  <div style="display: flex; align-items: center">
-                    <span style="flex-grow: 1; flex-shrink: 0; margin-right: 0.5rem">AWS AccountId:&nbsp;</span><br>
-                    <input name="AWS AccountId" v-model.trim="store.awsAccountId"
-                      type="text" class="form-control" placeholder="742482629247" required="true" style="flex-grow: 1; margin-right: 0.5rem">
-                    <button style="flex-grow: 1; margin-right: 0.5rem" type="submit" class="btn btn-primary" :disabled="!store.awsAccountId"><i class="fas fa-sign-in-alt" /> Login</button>
+                  
+                  <div class="form-group">
+                    <label for="accessKeyId">AWS Access Key ID:</label>
+                    <input 
+                      id="accessKeyId"
+                      name="accessKeyId" 
+                      v-model.trim="formState.accessKeyId"
+                      type="text" 
+                      class="form-control" 
+                      placeholder="AKIAIOSFODNN7EXAMPLE" 
+                      required="true">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="secretAccessKey">AWS Secret Access Key:</label>
+                    <input 
+                      id="secretAccessKey"
+                      name="secretAccessKey" 
+                      v-model.trim="formState.secretAccessKey"
+                      type="password" 
+                      class="form-control" 
+                      placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" 
+                      required="true">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="bucketName">S3 Bucket Name:</label>
+                    <input 
+                      id="bucketName"
+                      name="bucketName" 
+                      v-model.trim="formState.bucketName"
+                      type="text" 
+                      class="form-control" 
+                      placeholder="my-bucket-name" 
+                      required="true">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="region">AWS Region:</label>
+                    <select 
+                      id="region"
+                      name="region" 
+                      v-model="formState.region"
+                      class="form-control" 
+                      required="true">
+                      <option value="">Select Region</option>
+                      <option value="us-east-1">US East (N. Virginia)</option>
+                      <option value="us-east-2">US East (Ohio)</option>
+                      <option value="us-west-1">US West (N. California)</option>
+                      <option value="us-west-2">US West (Oregon)</option>
+                      <option value="eu-west-1">Europe (Ireland)</option>
+                      <option value="eu-west-2">Europe (London)</option>
+                      <option value="eu-west-3">Europe (Paris)</option>
+                      <option value="eu-central-1">Europe (Frankfurt)</option>
+                      <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                      <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                      <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                      <option value="ap-northeast-2">Asia Pacific (Seoul)</option>
+                      <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                      <option value="ca-central-1">Canada (Central)</option>
+                      <option value="sa-east-1">South America (São Paulo)</option>
+                    </select>
+                  </div>
+
+                  <div style="text-align: center; margin-top: 20px;">
+                    <button 
+                      type="button" 
+                      class="btn btn-default btn-lg" 
+                      @click="closeModal"
+                      style="margin-right: 10px;">
+                      <i class="fas fa-times" /> Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      class="btn btn-primary btn-lg" 
+                      :disabled="!isFormValid">
+                      <i class="fas fa-save" /> Save Settings
+                    </button>
                   </div>
 
                   <hr>
                   
-                  <div>
-                    <h4>One time AWS Cloud Formation setup</h4>
-                    The S3 Explorer provides a quick setup step using a CFN template. Follow the steps to configure your account, and only need to be run once per AWS account.
-                    <ol>
-                      <br>
-                      <li>
-                        <div style="display: flex; align-items: center; justify-content: space-between">
-                          <span>Launch the CFN template:<br><small>(you'll be able to review on the next screen)</small><br></span>
-                          <a :href="launchStackUrl || '#'" :target="launchStackUrl ? '_blank' : '_self'" :class="{ 'disabled': !launchStackUrl }"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
-                        </div>
-                      </li>
-                      <br>
-                      <li>
-                        Wait for the app to be completely deployed and then enter your AWS Account ID:
-                        <div>
-                          <input name="AWS AccountId" v-model.trim="store.awsAccountId" type="text" class="form-control" placeholder="742482629247" required="true"
-                            style="flex-grow: 1; margin-right: 0.5rem; width: 200px;" maxlength="20">
-                        </div>
-                      </li>
-                    </ol>
-                    <hr>
-                    <h4>[Optional] Connecting an SSO provider to Cognito:</h4>
-                    <ol>
-                      <li>
-                        Follow your provider's guide to create a new client.<br>Set the <strong>Redirect URI</strong> property set it to be:<br>
-                        <div class="input-group">
-                          <input name="AWS AccountId" :value="`https://${store.awsAccountId || ''}-s3explorer.auth.${store.region}.amazoncognito.com/oauth2/idpresponse`"
-                            type="text" class="form-control" placeholder="742482629247" required="true" style="flex-grow: 1;" :disabled="true">
-                          <span class="input-group-btn">
-                            <button style="flex-grow: 1;" class="btn btn-primary" type="button" :disabled="!store.awsAccountId"
-                              @click="copyCognitoPoolCallbackUrl">
-                                <span v-if="!state.copyButtonSuccess"><i class="fas fa-copy" /> Copy</span>
-                                <span v-else><i class="fas fa-check" /> Copy</span>
-                            </button>
-                          </span>
-
-                        </div>
-                      </li>
-                      <br>
-                      <li>
-                        Navigate to the newly created Cognito Pool and configure:
-                        <ul>
-                          <li><a :href="`${generatedCognitoPoolUrl}/sign-in/identity-providers/add`" target="_blank">
-                            Sign-in experience > Federated identity provider sign-in</a><br>Select your SSO identity provider and fill in the credentials.
-                          </li>
-                          <li><a :href="`${generatedCognitoPoolUrl}/app-integration/clients/${store.applicationClientId}/edit/hosted-ui-settings`" target="_blank">
-                            App integration > Identity providers</a><br>Select the new identity provider, that you just linked
-                              (then click <strong>Save changes</strong>)
-                          </li>
-                        </ul>
-                      </li>
-                    </ol>
+                  <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle"></i> Security Note</h5>
+                    <p>Your credentials are stored locally in your browser and are not transmitted to any external servers. Make sure you're using credentials with minimal required permissions for S3 access.</p>
                   </div>
                 </div>
               </div>
@@ -88,30 +115,92 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue';
-import { copyText } from 'vue3-clipboard';
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  reactive
+} from 'vue';
 
+import { setDirectCredentials } from '../awsUtilities';
 import store from '../store';
-import { login, setConfiguration } from '../awsUtilities';
+import {
+  loadCredentialsFromHash,
+  saveCredentialsToHash
+} from '../urlState';
 
-const state = reactive({ region: null, copyButtonSuccess: false });
-
-const suggestedRegion = 'eu-west-1';
-
-const generatedCognitoPoolUrl = computed(() => `https://${store.region}.console.aws.amazon.com/cognito/v2/idp/user-pools/${store.cognitoPoolId}`);
-const launchStackUrl = computed(() => {
-  return `https://${suggestedRegion}.console.aws.amazon.com/lambda/home?region=${suggestedRegion}#/create/app?applicationId=arn:aws:serverlessrepo:eu-west-1:922723803004:applications/S3-Explorer`;
+// Local form state for credentials
+const formState = reactive({
+  accessKeyId: '',
+  secretAccessKey: '',
+  bucketName: '',
+  region: ''
 });
 
-const cognitoLogin = async () => {
-  await setConfiguration(store.awsAccountId);
-  await login(true);
+// Load existing credentials from hash if available
+const existingConfig = loadCredentialsFromHash();
+formState.accessKeyId = existingConfig.accessKeyId || '';
+formState.secretAccessKey = existingConfig.secretAccessKey || '';
+formState.bucketName = existingConfig.bucketName || '';
+formState.region = existingConfig.region || '';
+
+const isFormValid = computed(() => {
+  return formState.accessKeyId && 
+         formState.secretAccessKey && 
+         formState.bucketName && 
+         formState.region;
+});
+
+const directLogin = async () => {
+  if (!isFormValid.value) {
+    return;
+  }
+  
+  try {
+    await setDirectCredentials({
+      accessKeyId: formState.accessKeyId,
+      secretAccessKey: formState.secretAccessKey,
+      region: formState.region
+    });
+    
+    // Set the current bucket
+    store.currentBucket = formState.bucketName;
+    
+    // Save credentials and configuration to hash parameters
+    saveCredentialsToHash({
+      accessKeyId: formState.accessKeyId,
+      secretAccessKey: formState.secretAccessKey,
+      bucketName: formState.bucketName,
+      region: formState.region,
+      currentDirectory: store.currentDirectory,
+      delimiter: store.delimiter
+    });
+    
+    // Hide the settings modal
+    store.showSettings = false;
+    
+    // Mark as logged in
+    store.autoLoginIn = true;
+    store.loggedOut = false;
+    
+    // Trigger a page refresh to load bucket contents
+    window.location.reload();
+  } catch (error) {
+    console.error('Failed to set credentials:', error);
+    alert('Failed to connect to S3. Please check your credentials and try again.');
+  }
 };
 
-const copyCognitoPoolCallbackUrl = () => {
-  copyText(`https://${store.awsAccountId}-s3explorer.auth.${store.region || suggestedRegion}.amazoncognito.com/oauth2/idpresponse`, undefined, () => {
-    state.copyButtonSuccess = true;
-    setConfiguration(store.awsAccountId);
-  });
+const closeModal = () => {
+  store.showSettings = false;
 };
+
+// Prevent body scroll when modal is open
+onMounted(() => {
+  document.body.classList.add('modal-open');
+});
+
+onUnmounted(() => {
+  document.body.classList.remove('modal-open');
+});
 </script>

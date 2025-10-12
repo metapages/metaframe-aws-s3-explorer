@@ -61,11 +61,16 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, computed } from 'vue';
-import DEBUG from '../logger';
-import { formatByteSize } from '../converters';
-import store from '../store';
+import {
+  computed,
+  onMounted,
+  reactive
+} from 'vue';
+
 import { fetchBucketObjectsExplicit } from '../bucketManager';
+import { formatByteSize } from '../converters';
+import DEBUG from '../logger';
+import store from '../store';
 
 const trash = reactive({ title: null, trashing: false, objectStatus: {} });
 
@@ -111,25 +116,25 @@ const deleteFiles = async (keys, objectMetadataList, recursion) => {
       return;
     }
 
-    DEBUG.log('Deleting key:', key);
     try {
       if (objectMap[key].type !== 'DIRECTORY') {
         await s3client.deleteObject({ Bucket: store.currentBucket.trim().toLowerCase(), Key: key }).promise();
       } else {
         const results = await fetchBucketObjectsExplicit(key);
 
-        DEBUG.log('Queuing deletes for:', key, results);
-        await deleteFiles(results.map(o => o.key), results, true);
+        if (results && Array.isArray(results)) {
+          await deleteFiles(results.map(o => o.key), results, true);
+        }
+        
+        // Delete the folder prefix itself (S3 folders are just prefixes)
+        await s3client.deleteObject({ Bucket: store.currentBucket.trim().toLowerCase(), Key: key }).promise();
       }
-
-      DEBUG.log('DELETED:', key);
 
       if (!recursion) {
         trash.objectStatus[key] = 'DELETED';
         store.deletedObjects[key] = true;
       }
     } catch (error) {
-      DEBUG.log(`Failed to delete: ${key} - ${error}`);
       if (recursion) {
         throw error;
       }

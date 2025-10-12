@@ -1,0 +1,22 @@
+{
+	"version": "2",
+	"metadata": {
+		"title": "aws-s3-explorer",
+		"author": "https://github.com/dionjwa",
+		"description": "AWS S3 Object explorer - https://github.com/metapages/metaframe-aws-s3-explorer"
+	},
+	"inputs": {
+		"config": {
+			"type": "application/json; charset=UTF-8"
+		}
+	},
+	"outputs": {
+		"files": {
+			"type": "application/json; charset=UTF-8"
+		},
+		"selected": {
+			"type": "application/json; charset=UTF-8"
+		}
+	},
+	"hashParams": ["config"]
+}

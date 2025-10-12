@@ -1,6 +1,13 @@
-import { reactive, watch, computed } from 'vue';
+import {
+  computed,
+  reactive,
+  watch
+} from 'vue';
+
+import { loadCredentialsFromHash } from './urlState';
 
 const storedData = JSON.parse(localStorage.getItem('s3console') || '{}');
+const hashConfig = loadCredentialsFromHash();
 
 const store = reactive(Object.assign({
   region: null,
@@ -10,6 +17,7 @@ const store = reactive(Object.assign({
   rememberedBuckets: [],
   currentDirectory: null,
 
+  // Legacy Cognito fields (keeping for compatibility)
   awsAccountId: null,
   cognitoPoolId: null,
   applicationClientId: null,
