@@ -12,11 +12,11 @@
 	},
 	"outputs": {
 		"files": {
-			"type": "application/json; charset=UTF-8"
+			"type": "application/json; charset=UTF-8"`
 		},
 		"selected": {
 			"type": "application/json; charset=UTF-8"
 		}
 	},
-	"hashParams": ["config"]
+	"hashParams": ["config", "path"]
 }
