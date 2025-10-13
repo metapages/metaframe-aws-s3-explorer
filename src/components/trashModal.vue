@@ -105,7 +105,7 @@ const closeModal = () => {
 };
 
 const deleteFiles = async (keys, objectMetadataList, recursion) => {
-  DEBUG.log('Delete file count:', keys.length);
+
   trash.trashing = true;
 
   const s3client = new AWS.S3({ region: store.region });
@@ -120,9 +120,9 @@ const deleteFiles = async (keys, objectMetadataList, recursion) => {
       if (objectMap[key].type !== 'DIRECTORY') {
         await s3client.deleteObject({ Bucket: store.currentBucket.trim().toLowerCase(), Key: key }).promise();
       } else {
-        const results = await fetchBucketObjectsExplicit(key);
+        const results = await fetchBucketObjectsExplicit(key, true);
 
-        if (results && Array.isArray(results)) {
+        if (results && Array.isArray(results) && results.length > 0) {
           await deleteFiles(results.map(o => o.key), results, true);
         }
         

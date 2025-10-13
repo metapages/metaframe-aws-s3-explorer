@@ -109,9 +109,9 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="path in sortedObjects.filter(o => o.type === 'DIRECTORY')" :key="path.key">
-                  <td style="text-align: center">
-                    <!-- Folders cannot be selected -->
+                <tr v-for="path in sortedObjects.filter(o => o.type === 'DIRECTORY')" :key="path.key" :class="{ 'last-selected': state.lastSelectedKey === path.key }">
+                  <td style="text-align: center; cursor: pointer" @click.stop="() => state.selectedKeys[path.key] = !state.selectedKeys[path.key]">
+                    <input type="checkbox" v-model="state.selectedKeys[path.key]">
                   </td>
                   <td><i class="fas fa-folder" style="margin-right: 1rem" /><a @click="exploreDirectory(path.key)" style="cursor: pointer;">
                     {{ path.key.split(store.delimiter).slice(-1)[0] || store.delimiter }}</a>
@@ -436,6 +436,7 @@ const globalSelectWatcher = computed(() => state.globalSelect);
 
 watch(globalSelectWatcher, newValue => {
   sortedObjects.value.forEach(o => {
+    // Include both files and folders in global select
     state.selectedKeys[o.key] = newValue;
   });
 });

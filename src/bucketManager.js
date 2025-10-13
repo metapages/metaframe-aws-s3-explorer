@@ -58,16 +58,18 @@ export async function fetchBucketObjectsExplicit(directory, findAllMatching = fa
   const params = {
     Bucket: store.currentBucket.trim().toLowerCase(),
     Delimiter: findAllMatching ? undefined : store.delimiter,
-    Prefix: directory ? (directory !== store.delimiter ? `${directory}/` : directory) : undefined,
+    Prefix: directory ? (findAllMatching ? `${directory}/` : (directory !== store.delimiter ? `${directory}/` : directory)) : undefined,
     RequestPayer: 'requester'
   };
-  let fullResultList;
-  while (params.ContinuationToken || !fullResultList) {
+  
+  let fullResultList = [];
+  while (params.ContinuationToken || !fullResultList.length) {
     const result = await s3client.listObjectsV2(params).promise();
-    const partialResultList = result.CommonPrefixes.map(object => ({
+    
+    const partialResultList = (result.CommonPrefixes || []).map(object => ({
       key: object.Prefix.slice(0, -1) || store.delimiter,
       type: 'DIRECTORY'
-    })).concat(result.Contents.map(object => ({
+    })).concat((result.Contents || []).map(object => ({
       key: object.Key,
       lastModified: DateTime.fromJSDate(new Date(object.LastModified)).toFormat('DD TTT'),
       size: object.Size,
@@ -75,11 +77,13 @@ export async function fetchBucketObjectsExplicit(directory, findAllMatching = fa
       type: 'PATH'
     })));
 
-    if (currentBucketInvocationIdentifier !== thisInvocationIdentifier) {
+    // Only check invocation identifier if we're populating bucket objects (not for recursive deletion)
+    if (populateBucketObjects && currentBucketInvocationIdentifier !== thisInvocationIdentifier) {
       break;
     }
     
-    fullResultList = (fullResultList || []).concat(partialResultList);
+    fullResultList = fullResultList.concat(partialResultList);
+    
     if (populateBucketObjects) {
       store.objects = fullResultList;
     }
@@ -87,7 +91,13 @@ export async function fetchBucketObjectsExplicit(directory, findAllMatching = fa
     if (limit && fullResultList.length >= limit) {
       break;
     }
+    
+    // If no continuation token, we're done
+    if (!result.NextContinuationToken) {
+      break;
+    }
   }
+  
   return fullResultList;
 }
 
