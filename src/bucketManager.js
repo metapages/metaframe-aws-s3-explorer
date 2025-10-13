@@ -18,6 +18,10 @@ const currentBucket = computed({
   }
 });
 watch(currentBucket, async () => {
+  // Don't fetch if we don't have credentials yet
+  if (!store.region || !store.currentBucket) {
+    return;
+  }
   try {
     await fetchBucketObjects();
   } catch (error) {
@@ -50,7 +54,7 @@ export async function fetchBucketObjectsExplicit(directory, findAllMatching = fa
     store.objects = [];
     currentBucketInvocationIdentifier = thisInvocationIdentifier;
   }
-  if (!store.currentBucket) {
+  if (!store.currentBucket || !store.region) {
     return [];
   }
 
@@ -102,7 +106,10 @@ export async function fetchBucketObjectsExplicit(directory, findAllMatching = fa
 }
 
 export async function validateConfiguration(bucket) {
-  const s3client = new AWS.S3({ maxRetries: 0 });
+  if (!store.region) {
+    throw Error('PERMISSIONS');
+  }
+  const s3client = new AWS.S3({ maxRetries: 0, region: store.region });
   try {
     await s3client.getBucketCors({ Bucket: bucket }).promise();
   } catch (err) {

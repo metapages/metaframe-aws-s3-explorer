@@ -10,10 +10,10 @@ const storedData = JSON.parse(localStorage.getItem('s3console') || '{}');
 const hashConfig = loadCredentialsFromHash();
 
 const store = reactive(Object.assign({
-  region: null,
+  region: hashConfig.region || null,
 
   delimiter: '/',
-  currentBucket: null,
+  currentBucket: hashConfig.bucketName || null,
   rememberedBuckets: [],
   currentDirectory: null,
 

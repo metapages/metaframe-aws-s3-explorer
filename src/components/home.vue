@@ -186,10 +186,7 @@ import {
   watch
 } from 'vue';
 
-import {
-  fetchSharedSettings,
-  login
-} from '../awsUtilities';
+import { login } from '../awsUtilities';
 import {
   downloadObjects,
   fetchBucketObjects
@@ -271,7 +268,6 @@ onMounted(async () => {
   }
 
   await login();
-  await fetchSharedSettings();
   store.globalLoader = false;
 
   // Check if authenticated (either via tokens or direct credentials)
