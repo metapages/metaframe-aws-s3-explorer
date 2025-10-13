@@ -18,7 +18,7 @@
               <span v-for="(part, partIndex) in pathParts" :key="part">
                 <a :style="{
                     'text-decoration': partIndex + 1 === pathParts.length ? 'none' : undefined,
-                    'color': partIndex + 1 === pathParts.length ? 'unset' : undefined,
+                    'color': 'white',
                     'cursor': partIndex + 1 === pathParts.length ? 'unset' : 'pointer'
                   }"
                   @click="exploreDirectory(pathParts.slice(0, partIndex + 1).join(store.delimiter))">
