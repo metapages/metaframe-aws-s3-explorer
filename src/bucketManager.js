@@ -37,10 +37,14 @@ export async function fetchBucketObjects() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       await fetchBucketObjectsExplicit(store.currentDirectory, null, null, true);
     }
+    // Clear deleted objects state since we have fresh data from S3
+    store.deletedObjects = {};
   } catch (error) {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       await fetchBucketObjectsExplicit(store.currentDirectory, null, null, true);
+      // Clear deleted objects state on retry success as well
+      store.deletedObjects = {};
       return;
     } catch (innerError) {
       throw error;
